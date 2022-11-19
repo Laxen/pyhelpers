@@ -1,3 +1,5 @@
+import math
+
 class Coord:
     def __init__(self, x, y):
         self.x = int(x)
@@ -22,6 +24,9 @@ class Coord:
 
     def __hash__(self):
         return hash((self.x, self.y))
+
+    def distance2_to(self, other):
+        return (self.x - other.x)**2 + (self.y - other.y)**2
 
     @classmethod
     def from_string(cls, string):
@@ -123,3 +128,60 @@ class Grid2D:
             if d == element:
                 count += 1
         return count
+
+    def find_path(self, start, end):
+        class Node:
+            def __init__(self, coords, cost):
+                self.coords = coords
+                self.parent = None
+                self.g = math.inf
+                self.h = 0
+                self.cost = cost
+
+            def __lt__(self, other):
+                return self.f < other.f
+
+            def __repr__(self):
+                return str(self.coords) + ": " + str(self.cost)
+
+            @property
+            def f(self):
+                return self.g + self.h
+
+        # Make a grid of nodes that contain the coords and costs
+        path_grid = Grid2D(self.width, self.height, 0)
+        for c, _ in path_grid:
+            n = Node(c, self[c])
+            n.h = start.distance2_to(end)
+            path_grid[c] = n
+
+        # Init the openset with the start node
+        openset = [path_grid[start]]
+        path_grid[start].g = 0
+
+        while len(openset) > 0:
+            # Sorts the openset so the cheapest node is at the end, then we pop it off
+            list.sort(openset, reverse=True)
+            current = openset.pop()
+
+            if current.coords == end:
+                break
+
+            for c, n in path_grid.neighbors(current.coords, diagonal=False).items():
+                new_g = current.g + n.cost
+
+                # This is a cheaper way to reach this node, update it
+                if new_g < n.g:
+                    n.parent = current
+                    n.g = new_g
+
+                    if n not in openset:
+                        openset.append(n)
+
+        path = [end]
+        n = path_grid[end].parent
+        while n != None:
+            path.append(n.coords)
+            n = n.parent
+
+        return path
