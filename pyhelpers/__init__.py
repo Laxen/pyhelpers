@@ -13,7 +13,12 @@ class Coord:
         return Coord(self.x + other.x, self.y + other.y)
 
     def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+        if isinstance(other, Coord):
+            return self.x == other.x and self.y == other.y
+        elif isinstance(other, tuple):
+            return self.x == other[0] and self.y == other[1]
+        else:
+            raise TypeError("Can't compare Coord to type {}".format(type(other)))
 
     def __hash__(self):
         return hash((self.x, self.y))
@@ -33,11 +38,32 @@ class Grid2D:
             for x in range(self.width):
                 self[x, y] = element
 
+    @classmethod
+    def from_2d_list(cls, list_2d):
+        grid = Grid2D(len(list_2d[0]), len(list_2d), 0)
+        for c, _ in grid:
+            grid[c] = list_2d[c.y][c.x]
+        return grid
+
+    @classmethod
+    def from_coords(cls, coords_list, element):
+        grid = Grid2D(0, 0, 0)
+        for c in coords_list:
+            grid.width = max(grid.width, c.x + 1)
+            grid.height = max(grid.height, c.y + 1)
+            grid[c] = element
+
+        return grid
+
     def __repr__(self):
         string = ""
         for y in range(self.height):
             for x in range(self.width):
-                string += str(self[x, y]) + " "
+                e = self[x, y]
+                if e is not None:
+                    string += str(e) + " "
+                else:
+                    string += ". "
             string += "\n"
 
         return string
@@ -49,9 +75,13 @@ class Grid2D:
 
     def __getitem__(self, keys):
         if isinstance(keys, tuple):
-            return self.grid[Coord(keys[0], keys[1])]
+            if keys in self.grid:
+                return self.grid[Coord(keys[0], keys[1])]
+            return None
         elif isinstance(keys, Coord):
-            return self.grid[keys]
+            if keys in self.grid:
+                return self.grid[keys]
+            return None
         else:
             raise TypeError("Grid can't get element with key type {}".format(type(keys)))
 
@@ -86,3 +116,10 @@ class Grid2D:
             n[Coord(x+1, y)] = self[x+1, y]
 
         return n
+
+    def count(self, element):
+        count = 0
+        for _, d in self:
+            if d == element:
+                count += 1
+        return count
