@@ -80,8 +80,23 @@ class Grid2D:
 
     def __getitem__(self, keys):
         if isinstance(keys, tuple):
-            if keys in self.grid:
-                return self.grid[Coord(keys[0], keys[1])]
+            if isinstance(keys[0], slice):
+                xslice = keys[0].indices(self.width)
+                yslice = keys[1].indices(self.height)
+
+                matrix = []
+                for y in range(yslice[0], yslice[1]):
+                    row = []
+                    for x in range(xslice[0], xslice[1]):
+                        row.append(self[x, y])
+                    matrix.append(row)
+
+                new_grid = Grid2D.from_2d_list(matrix)
+
+                return new_grid
+            else:
+                if keys in self.grid:
+                    return self.grid[Coord(keys[0], keys[1])]
             return None
         elif isinstance(keys, Coord):
             if keys in self.grid:
@@ -185,3 +200,9 @@ class Grid2D:
             n = n.parent
 
         return path
+
+    def flatten(self):
+        flat = []
+        for _, e in self:
+            flat.append(e)
+        return flat
