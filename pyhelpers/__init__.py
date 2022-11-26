@@ -1,71 +1,117 @@
 import math
 
 class Coord:
-    def __init__(self, x, y):
+    def __init__(self, x, y, z=None):
         self.x = int(x)
         self.y = int(y)
+        self.z = int(z) if z != None else None
 
-    # Returns a Coord from a string with format "x,y"
+    # Returns a Coord from a string with format "x,y(,z)"
     @classmethod
     def from_string(cls, string):
-        x, y = string.split(",")
-        return cls(x, y)
+        s = string.split(",")
+        if len(s) == 3:
+            return cls(s[0], s[1], s[2])
+        else:
+            return cls(s[0], s[1])
 
     # Returns the squared distance from this Coord to another Coord
     def distance2_to(self, other):
-        return (self.x - other.x)**2 + (self.y - other.y)**2
+        if self.z == None and other.z == None:
+            return (self.x - other.x)**2 + (self.y - other.y)**2
+        return (self.x - other.x)**2 + (self.y - other.y)**2 + (self.z - other.z)**2
 
     def __repr__(self):
-        return "({},{})".format(self.x, self.y)
+        if self.z == None:
+            return "({},{})".format(self.x, self.y)
+        return "({},{},{})".format(self.x, self.y, self.z)
 
     def __sub__(self, other):
-        return Coord(self.x - other.x, self.y - other.y)
+        if self.z == None and other.z == None:
+            return Coord(self.x - other.x, self.y - other.y)
+        return Coord(self.x - other.x, self.y - other.y, self.z - other.z)
 
     def __add__(self, other):
-        return Coord(self.x + other.x, self.y + other.y)
+        if self.z == None and other.z == None:
+            return Coord(self.x + other.x, self.y + other.y)
+        return Coord(self.x + other.x, self.y + other.y, self.z + other.z)
 
     def __eq__(self, other):
         if isinstance(other, Coord):
-            return self.x == other.x and self.y == other.y
+            return self.x == other.x and self.y == other.y and self.z == other.z
         elif isinstance(other, tuple):
-            return self.x == other[0] and self.y == other[1]
+            if self.z == None and len(other) == 2:
+                return self.x == other[0] and self.y == other[1]
+            return self.x == other[0] and self.y == other[1] and self.z == other[2]
         else:
             raise TypeError("Can't compare Coord to type {}".format(type(other)))
 
     def __hash__(self):
-        return hash((self.x, self.y))
+        return hash((self.x, self.y, self.z))
 
-class Grid2D:
-    def __init__(self, width, height, element):
+    def __getitem__(self, key):
+        if key == 0:
+            return self.x
+        elif key == 1:
+            return self.y
+        elif key == 2:
+            return self.z
+        else:
+            raise KeyError()
+
+    def __setitem__(self, key, value):
+        if key == 0:
+            self.x = value
+        elif key == 1:
+            self.y = value
+        elif key == 2:
+            self.z = value
+        else:
+            raise KeyError()
+
+class Grid:
+    def __init__(self, element, width, height, depth=None):
         self.width = width
         self.height = height
+        self.depth = depth
 
         self.grid = dict()
-        for y in range(self.height):
-            for x in range(self.width):
-                self[x, y] = element
+        for z in range(depth if depth != None else 1):
+            for y in range(self.height):
+                for x in range(self.width):
+                    if depth == None:
+                        self[x, y] = element
+                    else:
+                        self[x, y, z] = element
 
-    # Returns a Grid2D with elements initialized from a 2D list
+    # Returns a Grid with elements initialized from a 2D list
     @classmethod
     def from_2d_list(cls, list_2d):
-        grid = Grid2D(len(list_2d[0]), len(list_2d), 0)
+        grid = Grid(0, len(list_2d[0]), len(list_2d))
         for c, _ in grid:
             grid[c] = list_2d[c.y][c.x]
         return grid
 
-    # Returns a Grid2D with Coords from coords_list set to element and the rest
+    # Returns a Grid with Coords from coords_list set to element and the rest
     # set to 0
     @classmethod
     def from_coords(cls, coords_list, element):
-        grid = Grid2D(0, 0, 0)
+        if coords_list[0].z == None:
+            grid = Grid(0, 0, 0)
+        else:
+            grid = Grid(0, 0, 0, 0)
+
         for c in coords_list:
             grid.width = max(grid.width, c.x + 1)
             grid.height = max(grid.height, c.y + 1)
+            if grid.depth != None:
+                grid.depth = max(grid.depth, c.z + 1)
             grid[c] = element
 
         return grid
 
     # Returns a dict with the neighbors for a given Coord
+    # TODO: Fix for 3D
     def neighbors(self, coord, diagonal=True):
         n = dict()
         x = coord.x
@@ -99,6 +145,7 @@ class Grid2D:
         return count
 
     # Returns a list of Coords containing the shortest path from start to end
+    # TODO: Fix for 3D
     def find_path(self, start, end):
         class Node:
             def __init__(self, coords, cost):
@@ -119,7 +166,7 @@ class Grid2D:
                 return self.g + self.h
 
         # Make a grid of nodes that contain the coords and costs
-        path_grid = Grid2D(self.width, self.height, 0)
+        path_grid = Grid(0, self.width, self.height)
         for c, _ in path_grid:
             n = Node(c, self[c])
             n.h = start.distance2_to(end)
@@ -165,56 +212,188 @@ class Grid2D:
 
     def __repr__(self):
         string = ""
-        for y in range(self.height):
-            for x in range(self.width):
-                e = self[x, y]
-                if e is not None:
-                    string += str(e) + " "
-                else:
-                    string += ". "
-            string += "\n"
+        for z in range(self.depth if self.depth != None else 1):
+            if self.depth != None:
+                string += "z: " + str(z) + "\n"
+            for y in range(self.height):
+                for x in range(self.width):
+                    e = self[x, y] if self.depth == None else self[x, y, z]
+                    if e is not None:
+                        string += str(e) + " "
+                    else:
+                        string += ". "
+                string += "\n"
 
         return string
 
     def __iter__(self):
-        for y in range(self.height):
-            for x in range(self.width):
-                yield Coord(x,y), self[x, y]
+        for z in range(self.depth if self.depth != None else 1):
+            for y in range(self.height):
+                for x in range(self.width):
+                    if self.depth == None:
+                        yield Coord(x, y), self[x, y]
+                    else:
+                        yield Coord(x, y, z), self[x, y, z]
 
-    def __getitem__(self, keys):
-        if isinstance(keys, tuple):
-            # Tuple can be both (x,y) and a slice
-            if isinstance(keys[0], slice):
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            # Tuple can be (x,y), (x, y, z) or a slice
+            if isinstance(key[0], slice):
                 # Slice
-                xslice = keys[0].indices(self.width)
-                yslice = keys[1].indices(self.height)
+                xslice = key[0].indices(self.width)
+                yslice = key[1].indices(self.height)
 
-                matrix = []
-                for y in range(yslice[0], yslice[1]):
-                    row = []
-                    for x in range(xslice[0], xslice[1]):
-                        row.append(self[x, y])
-                    matrix.append(row)
-
-                new_grid = Grid2D.from_2d_list(matrix)
+                if self.depth == None:
+                    new_grid = Grid(0, xslice[1] - xslice[0], yslice[1] - yslice[0])
+                    for new_y, grid_y in enumerate(range(yslice[0], yslice[1])):
+                        for new_x, grid_x in enumerate(range(xslice[0], xslice[1])):
+                            new_grid[new_x, new_y] = self[grid_x, grid_y]
+                else:
+                    zslice = key[2].indices(self.depth)
+                    new_grid = Grid(0, xslice[1] - xslice[0], yslice[1] - yslice[0], zslice[1] - zslice[0])
+                    for new_z, grid_z in enumerate(range(zslice[0], zslice[1])):
+                        for new_y, grid_y in enumerate(range(yslice[0], yslice[1])):
+                            for new_x, grid_x in enumerate(range(xslice[0], xslice[1])):
+                                new_grid[new_x, new_y, new_z] = self[grid_x, grid_y, grid_z]
                 return new_grid
             else:
                 # Tuple
-                if keys in self.grid:
-                    return self.grid[Coord(keys[0], keys[1])]
+                c = Coord(*key)
+                if c in self.grid:
+                    return self.grid[c]
             return None
-        elif isinstance(keys, Coord):
+        elif isinstance(key, Coord):
             # Coord
-            if keys in self.grid:
-                return self.grid[keys]
+            if key in self.grid:
+                return self.grid[key]
             return None
         else:
-            raise TypeError("Grid can't get element with key type {}".format(type(keys)))
+            raise TypeError("Grid can't get element with key type {}".format(type(key)))
 
-    def __setitem__(self, keys, item):
-        if isinstance(keys, tuple):
-            self.grid[Coord(keys[0], keys[1])] = item
-        elif isinstance(keys, Coord):
-            self.grid[keys] = item
+    def __setitem__(self, key, item):
+        if isinstance(key, tuple):
+            # Tuple can be (x,y), (x, y, z) or a slice
+            if isinstance(key[0], slice):
+                # Slice
+                xslice = key[0].indices(self.width)
+                yslice = key[1].indices(self.height)
+
+                if self.depth == None:
+                    for grid_y in range(yslice[0], yslice[1]):
+                        for grid_x in range(xslice[0], xslice[1]):
+                            self.grid[grid_x, grid_y] = item
+                else:
+                    zslice = key[2].indices(self.depth)
+                    for grid_z in range(zslice[0], zslice[1]):
+                        for grid_y in range(yslice[0], yslice[1]):
+                            for grid_x in range(xslice[0], xslice[1]):
+                                self.grid[grid_x, grid_y, grid_z] = item
+            else:
+                # Tuple
+                self.grid[Coord(*key)] = item
+        elif isinstance(key, Coord):
+            self.grid[key] = item
         else:
-            raise TypeError("Grid can't set element with key type {}".format(type(keys)))
+            raise TypeError("Grid can't set element with key type {}".format(type(key)))
+
+class Cube:
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+
+    # Calculate the intersecting Cube between two Cubes
+    # other: The Cube to intersect with
+    # returns: The intersecting Cube
+    def intersect(self, other):
+        intersect = Cube(Coord(0,0,0), Coord(0,0,0))
+
+        for d in range(3):
+            # Case 1, 2, 3 (other to the right of, or inside, self)
+            if other.start[d] >= self.start[d]:
+                # Case 1 (other fully to the right of self, no intersection)
+                if other.start[d] >= self.end[d]:
+                    return None
+
+                # Case 3 (other fully inside self)
+                if other.end[d] <= self.end[d]:
+                    intersect.start[d] = other.start[d]
+                    intersect.end[d] = other.end[d]
+                    continue
+
+                # Case 2 (other partially inside self)
+                intersect.start[d] = other.start[d]
+                intersect.end[d] = self.end[d]
+            # Case 4, 5, 6 (self to the right of, or inside, other)
+            else:
+                # Case 6 (self fully to the right of other, no intersection)
+                if self.start[d] >= other.end[d]:
+                    return None
+
+                # Case 4 (self fully inside other)
+                if self.end[d] <= other.end[d]:
+                    intersect.start[d] = self.start[d]
+                    intersect.end[d] = self.end[d]
+                    continue
+
+                # Case 5 (self partially inside other)
+                intersect.start[d] = self.start[d]
+                intersect.end[d] = other.end[d]
+        return intersect
+
+    # Subtract other from self
+    # other: Cube that is guaranteed to be inside self
+    # return: List of Cubes making up self after subtraction
+    def subtract(self, other):
+        res = []
+
+        def subtract_1d(self, other, d):
+            cubes = []
+
+            c1 = Cube(Coord(0,0,0), Coord(0,0,0))
+            c1.start[d] = self.start[d]
+            c1.end[d] = other.start[d]
+            if c1.start[d] != c1.end[d]:
+                cubes.append(c1)
+
+            c2 = Cube(Coord(0,0,0), Coord(0,0,0))
+            c2.start[d] = other.end[d]
+            c2.end[d] = self.end[d]
+            if c2.start[d] != c2.end[d]:
+                cubes.append(c2)
+
+            return cubes
+
+        sub_x = subtract_1d(self, other, 0)
+        for c in sub_x:
+            c.start.y = self.start.y
+            c.end.y = self.end.y
+            c.start.z = self.start.z
+            c.end.z = self.end.z
+            res.append(c)
+
+        sub_y = subtract_1d(self, other, 1)
+        for c in sub_y:
+            c.start.x = other.start.x
+            c.end.x = other.end.x
+            c.start.z = self.start.z
+            c.end.z = self.end.z
+            res.append(c)
+
+        sub_z = subtract_1d(self, other, 2)
+        for c in sub_z:
+            c.start.x = other.start.x
+            c.end.x = other.end.x
+            c.start.y = other.start.y
+            c.end.y = other.end.y
+            res.append(c)
+
+        return res
+
+    @property
+    def area(self):
+        return abs(self.start.x - self.end.x) * \
+               abs(self.start.y - self.end.y) * \
+               abs(self.start.z - self.end.z)
+
+    def __repr__(self):
+        return "{} -> {}".format(self.start, self.end)
