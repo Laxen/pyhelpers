@@ -1,4 +1,5 @@
 import math
+import re
 
 class Coord:
     def __init__(self, x, y, z=None):
@@ -397,3 +398,27 @@ class Cube:
 
     def __repr__(self):
         return "{} -> {}".format(self.start, self.end)
+
+class Parser():
+    def row_to_int(input_file):
+        with open(input_file) as file:
+            ret = [int(line) for line in file]
+        return ret
+
+    def to_grid(input_file):
+        matrix = []
+        with open(input_file) as file:
+            for line in file:
+                row = [int(e) if e.isdigit() else e for e in line.rstrip()]
+                matrix.append(row)
+        return Grid.from_2d_list(matrix)
+
+    def regex(input_file, regex):
+        pattern = re.compile(regex)
+
+        with open(input_file) as file:
+            for line in file:
+                search = pattern.search(line.rstrip())
+
+                if search:
+                    yield search.groups()
