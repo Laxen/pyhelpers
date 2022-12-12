@@ -177,12 +177,14 @@ class Grid:
         openset = [path_grid[start]]
         path_grid[start].g = 0
 
+        foundpath = False
         while len(openset) > 0:
             # Sorts the openset so the cheapest node is at the end, then we pop it off
             list.sort(openset, reverse=True)
             current = openset.pop()
 
             if current.coords == end:
+                foundpath = True
                 break
 
             for c, n in path_grid.neighbors(current.coords, diagonal=False).items():
@@ -195,6 +197,9 @@ class Grid:
 
                     if n not in openset:
                         openset.append(n)
+
+        if not foundpath:
+            return None
 
         path = [end]
         n = path_grid[end].parent
