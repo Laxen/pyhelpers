@@ -405,10 +405,16 @@ class Cube:
         return "{} -> {}".format(self.start, self.end)
 
 class Parser():
+    # Parse each row as an int, return as list
     def row_to_int(input_file):
         with open(input_file) as file:
             ret = [int(line) for line in file]
         return ret
+
+    # Find all ints in a row, return as list
+    def ints_to_list(input_file):
+        with open(input_file) as file:
+            return [int(m) for m in re.findall(r'-?\d+', file.read())]
 
     def to_grid(input_file):
         matrix = []
@@ -427,3 +433,38 @@ class Parser():
 
                 if search:
                     yield search.groups()
+
+class HashGrid:
+    def __init__(self):
+        self.grid = {}
+
+    def find(self, value):
+        ret = []
+        for key, val in self.grid.items():
+            if val == value:
+                ret.append(key)
+        return ret
+
+    def __repr__(self):
+        max_x = max(key[0] for key in self.grid.keys())
+        max_y = max(key[1] for key in self.grid.keys())
+        min_x = min(key[0] for key in self.grid.keys())
+        min_y = min(key[1] for key in self.grid.keys())
+
+        array = [[0] * (max_x - min_x + 1) for _ in range(max_y - min_y + 1)]
+        for key, value in self.grid.items():
+            array[key[1] - min_y][key[0] - min_x] = value
+
+        return "\n".join("".join(str(x) for x in row) for row in array)
+
+    def __contains__(self, key):
+        return key in self.grid
+
+    def __getitem__(self, key):
+        if key not in self.grid:
+            return None
+        return self.grid[key]
+
+    def __setitem__(self, key, value):
+        self.grid[key] = value
+
