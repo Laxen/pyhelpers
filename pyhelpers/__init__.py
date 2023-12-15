@@ -468,3 +468,28 @@ class HashGrid:
     def __setitem__(self, key, value):
         self.grid[key] = value
 
+def intersect(range1, range2):
+    # Ranges are lists of intervals, e.g. [(0, 10), (20, 30)] where each tuple
+    # is a dimension.
+    # Intersects range1 with range2, returns intersection interval and any
+    # interval belonging to range1 that doesn't intersect. Intervals belonging
+    # to range2 that doesn't intersect are NOT returned.
+
+    overlaps = []
+    non_overlaps = []
+
+    for dim1, dim2 in zip(range1, range2):
+        overlap_start = max(dim1[0], dim2[0])
+        overlap_end = min(dim1[1], dim2[1])
+
+        if overlap_start < overlap_end:
+            overlaps.append((overlap_start, overlap_end))
+            if dim1[0] < overlap_start:
+                non_overlaps.append((dim1[0], overlap_start))
+            if dim1[1] > overlap_end:
+                non_overlaps.append((overlap_end, dim1[1]))
+        else:
+            non_overlaps.append(dim1)
+            non_overlaps.append(dim2)
+
+    return overlaps, non_overlaps
