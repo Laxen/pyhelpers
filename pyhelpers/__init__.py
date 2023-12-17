@@ -493,3 +493,8 @@ def intersect(range1, range2):
             non_overlaps.append(dim2)
 
     return overlaps, non_overlaps
+
+def in_bounds(coord, array):
+    # Returns True if tuple coord is within the bounds of numpy array array
+    return coord[0] >= 0 and coord[0] < array.shape[0] and \
+           coord[1] >= 0 and coord[1] < array.shape[1]
