@@ -475,24 +475,47 @@ def intersect(range1, range2):
     # interval belonging to range1 that doesn't intersect. Intervals belonging
     # to range2 that doesn't intersect are NOT returned.
 
-    overlaps = []
+    overlap = []
     non_overlaps = []
+
+    if not overlaps(range1, range2):
+        return [], range1
 
     for dim1, dim2 in zip(range1, range2):
         overlap_start = max(dim1[0], dim2[0])
         overlap_end = min(dim1[1], dim2[1])
 
         if overlap_start < overlap_end:
-            overlaps.append((overlap_start, overlap_end))
-            if dim1[0] < overlap_start:
-                non_overlaps.append((dim1[0], overlap_start))
-            if dim1[1] > overlap_end:
-                non_overlaps.append((overlap_end, dim1[1]))
+            overlap.append((overlap_start, overlap_end))
         else:
-            non_overlaps.append(dim1)
-            non_overlaps.append(dim2)
+            overlap.append((dim1[0], dim1[1]))
 
-    return overlaps, non_overlaps
+    i_dim = 0
+    for dim, intersection in zip(range1, overlap):
+        if dim[0] < intersection[0]:
+            non_overlaps.append(range1.copy())
+            non_overlaps[-1][i_dim] = (dim[0], intersection[0])
+        if dim[1] > intersection[1]:
+            non_overlaps.append(range1.copy())
+            non_overlaps[-1][i_dim] = (intersection[1], dim[1])
+
+        i_dim += 1
+
+    return overlap, non_overlaps
+
+def overlaps(range1, range2):
+    # Ranges are lists of intervals, e.g. [(0, 10), (20, 30)] where each tuple
+    # is a dimension.
+    # Returns True if range1 overlaps range2, False otherwise.
+
+    for dim1, dim2 in zip(range1, range2):
+        overlap_start = max(dim1[0], dim2[0])
+        overlap_end = min(dim1[1], dim2[1])
+
+        if overlap_start > overlap_end:
+            return False
+
+    return True
 
 def in_bounds(coord, array):
     # Returns True if tuple coord is within the bounds of numpy array array
